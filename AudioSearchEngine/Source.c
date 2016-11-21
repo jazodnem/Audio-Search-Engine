@@ -12,6 +12,7 @@ void printInfo(int frames, int channels, int sampleRate);
 void watermark(double *buffer, int count, int channels);
 void watermark2(double *buffer, int count);
 void readFile(int fileNumber);
+void printBuffer(double *buffer, size_t count);
 
 int main(void)
 {
@@ -49,7 +50,7 @@ int processFile(int fileNumber)
 	static double buffer[BUF_SIZE];
 	SF_INFO info;
 	SNDFILE *infile,*outfile;
-	int readCount;
+	int readCount, i;
 
 
 	/*
@@ -92,22 +93,30 @@ int processFile(int fileNumber)
 
 	/*
 	Actual buffer size is numItems, somehow can't declare buffer as buffer[numItems]
-	BUF_SIZE is set to 1024, which means that it reads the data in chunks of 1024 frames
-	it will keep writing in 1024 chuncks until all numItems have been written (numItems/BUF_SIZE)
+	BUF_SIZE is set to 1024, which means that it reads the data in chunks of 1024 items
+	it will keep writing in 1024 chunks until all numItems have been written (numItems/BUF_SIZE)
 	Needs to be on a while loop otherwise it will only write the first 1024 frames of the file
 	*/
 
-	/*
-	Don't write if the answer to read the new file is yes.
-	????
-	*/
+	
 	while ((readCount = sf_read_double(infile, buffer, BUF_SIZE)))
-	{
+	{	
+
 		watermark(buffer, readCount, info.channels);
-		sf_write_double(outfile, buffer, readCount);
+		sf_write_double(outfile, buffer, readCount);	
+		printBuffer(buffer, sizeof(buffer) / sizeof *buffer);
+		
+
 	};
+	/*
+	When called after being written, it only reads the last 1024 items of the file which is the quietest 
+	part and are all zeros.
+	*/
+
 
 	
+
+
 	/*
 	Can only close SF_open once both reading/writing has been done
 	if you close infile after the read, it's not able to copy the audio
@@ -124,6 +133,8 @@ void readFile(int fileNumber)
 {
 	SF_INFO info;
 	SNDFILE *infile;
+	int readCount;
+	static double buffer[BUF_SIZE];
 
 	char *Files[] = { "D:/Jon/Downloads/File1Output.wav", "D:/Jon/Downloads/File2Output.wav", "D:/Jon/Downloads/File3Output.wav"
 		, "D:/Jon/Downloads/File4Output.wav", "D:/Jon/Downloads/File5Output.wav" };
@@ -134,6 +145,11 @@ void readFile(int fileNumber)
 
 	printf("You have opened: %s\n", Files[fileNumber - 1]);
 	printInfo(info.frames, info.channels, info.samplerate);
+
+	while ((readCount = sf_read_double(infile, buffer, BUF_SIZE)))
+	{
+		printBuffer(buffer, sizeof(buffer) / sizeof *buffer);
+	};
 
 	sf_close(infile);
 
@@ -181,8 +197,8 @@ void watermark(double *buffer, int count, int channels)
 	else
 	{
 		/*
-		If audio file has 1 channel, buffer[i] is set to 0 for all values < 1024/5 frames
-		and it goes back to normal until the next 1024 frames where the first  1024/5 frames.s
+		If audio file has 1 channel, buffer[i] is set to 0 for all values where i < 1024/5 frames
+		and it goes back to normal until the next 1024 frames where the first  1024/5 frames.
 		*/
 		for (i = 0; i < count / 5; i++)
 		{
@@ -193,8 +209,25 @@ void watermark(double *buffer, int count, int channels)
 	return;
 }
 
+void printBuffer(double *buffer, size_t count)
+{
+	int i;	
+	for (i = 0; i < count; i++)
+	{
+	/*
+	Print the index position and value where value is not = 0
+	*/
+
+		if (buffer[i] != 0 && i < count)
+			printf("Position: %d \nValue: %lf\n", i, buffer[i]);
+		
+		
+	}
+	
+}
+
 /*
-- Need to create function that will read the newly outputted file
-- Find where the watermarks have been left on the audio
+- *DONE* - Need to create function that will read the newly outputted file 
+- *DONE* - Find where the watermarks have been left on the audio
 - Compare buffer[] values between original file and new outputted file
 */
