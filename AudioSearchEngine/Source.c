@@ -3,16 +3,32 @@
 #include <stdlib.h>
 #include <sndfile.h>
 #include <time.h>
+#include <stdbool.h>
+#include <math.h>
 
 #define MAX_CHANNEL 2
 #define BUF_SIZE 1024
 
+//prototype declarartions
 int numItems(int frames, int channels);
 void printInfo(int frames, int channels, int sampleRate);
-void watermark(double *buffer, int count, int channels);
-void watermark2(double *buffer, int count);
+void insertWatermark(double *buffer, int count, int channels);
 void readFile(int fileNumber);
 void printBuffer(double *buffer, size_t count);
+void retrieveWatermark(double *buffer, int count, int channels, int chunkCount);
+
+
+char *Files[] = { "D:/Jon/Downloads/File1.wav", "D:/Jon/Downloads/File2.wav", "D:/Jon/Downloads/File3.wav"
+				, "D:/Jon/Downloads/File4.wav", "D:/Jon/Downloads/File5.wav" };
+
+char *Files2[] = { "D:/Jon/Downloads/File1Output.wav", "D:/Jon/Downloads/File2Output.wav", "D:/Jon/Downloads/File3Output.wav"
+				, "D:/Jon/Downloads/File4Output.wav", "D:/Jon/Downloads/File5Output.wav" };
+
+int watermarkInterval = 4;
+
+bool isStartOfSong = 0;
+
+
 
 int main(void)
 {
@@ -28,18 +44,23 @@ int main(void)
 	scanf("%d", &chosenFile);	
 	
 	processFile(chosenFile);
-	/*
-	Put boolean here to check whether to process the original file or the new one
-	*/
+
 	printf("Would you like to read the new file?\n");
 	printf("1. Yes\n");
 	printf("2. No\n");
 	scanf("%d", &answer);
 
 	if (answer == 1)
-	{
+	{	
+		clock_t start = clock(), diff;
 		readFile(chosenFile);
+		diff = clock() - start;
+		int msec = diff * 1000 / CLOCKS_PER_SEC;
+		printf("CPU time taken to find watermarks %d seconds %d milliseconds\n", msec / 1000, msec % 1000);
 	}
+	
+
+	
 
 }
 
@@ -51,17 +72,6 @@ int processFile(int fileNumber)
 	SF_INFO info;
 	SNDFILE *infile,*outfile;
 	int readCount, i;
-
-
-	/*
-	Put boolean here to check whether it should read the original files, or the new output files
-
-	*/
-	char *Files[] = { "D:/Jon/Downloads/File1.wav", "D:/Jon/Downloads/File2.wav", "D:/Jon/Downloads/File3.wav"
-		, "D:/Jon/Downloads/File4.wav", "D:/Jon/Downloads/File5.wav" };
-
-	char *Files2[] = { "D:/Jon/Downloads/File1Output.wav", "D:/Jon/Downloads/File2Output.wav", "D:/Jon/Downloads/File3Output.wav"
-		, "D:/Jon/Downloads/File4Output.wav", "D:/Jon/Downloads/File5Output.wav" };
 
 	char *inputFile = Files[fileNumber - 1];
 
@@ -76,7 +86,7 @@ int processFile(int fileNumber)
 	printf("You have opened: %s\n", Files[fileNumber - 1]);
 	printInfo( info.frames, info.channels, info.samplerate);
 	int num = numItems(info.frames, info.channels);
-	printf("Buffer(frames*channels): %d \n", num);
+	printf("Number of Items(frames*channels): %d \n", num);
 	
 
 	/*WRITING FILE*/	
@@ -94,28 +104,26 @@ int processFile(int fileNumber)
 	/*
 	Actual buffer size is numItems, somehow can't declare buffer as buffer[numItems]
 	BUF_SIZE is set to 1024, which means that it reads the data in chunks of 1024 items
-	it will keep writing in 1024 chunks until all numItems have been written (numItems/BUF_SIZE)
+	it will keep reading/writing in 1024 chunks until all numItems have been read/written (numItems/BUF_SIZE)
 	Needs to be on a while loop otherwise it will only write the first 1024 frames of the file
 	*/
 
-	
+	int chunksPerSecond = (info.samplerate / info.channels) / BUF_SIZE;
+	int chunksPerWatermark = chunksPerSecond * watermarkInterval;
+	long chunkCount = 0;
 	while ((readCount = sf_read_double(infile, buffer, BUF_SIZE)))
 	{	
-
-		watermark(buffer, readCount, info.channels);
+		/*increases total frames in the file instead of overwriting original value*/
+		chunkCount++;
+		if (chunkCount % chunksPerWatermark == 0)
+		{
+			printf("Watermark count: %d\n", chunkCount);
+			insertWatermark(buffer, readCount, info.channels);
+			sf_write_double(outfile, buffer, readCount);
+		}
 		sf_write_double(outfile, buffer, readCount);	
-		printBuffer(buffer, sizeof(buffer) / sizeof *buffer);
 		
-
 	};
-	/*
-	When called after being written, it only reads the last 1024 items of the file which is the quietest 
-	part and are all zeros.
-	*/
-
-
-	
-
 
 	/*
 	Can only close SF_open once both reading/writing has been done
@@ -132,29 +140,43 @@ int processFile(int fileNumber)
 void readFile(int fileNumber)
 {
 	SF_INFO info;
-	SNDFILE *infile;
+	SNDFILE *infile2;
 	int readCount;
-	static double buffer[BUF_SIZE];
+	static double buffer2[BUF_SIZE];
+	
 
-	char *Files[] = { "D:/Jon/Downloads/File1Output.wav", "D:/Jon/Downloads/File2Output.wav", "D:/Jon/Downloads/File3Output.wav"
-		, "D:/Jon/Downloads/File4Output.wav", "D:/Jon/Downloads/File5Output.wav" };
+	char *inputFile = Files2[fileNumber - 1];
 
-	char *inputFile = Files[fileNumber - 1];
-
-	infile = sf_open(inputFile, SFM_READ, &info);
-
-	printf("You have opened: %s\n", Files[fileNumber - 1]);
-	printInfo(info.frames, info.channels, info.samplerate);
-
-	while ((readCount = sf_read_double(infile, buffer, BUF_SIZE)))
+	//infile = sf_open(inputFile, SFM_READ, &info);
+	if (!(infile2 = sf_open(inputFile, SFM_READ, &info)))
 	{
-		printBuffer(buffer, sizeof(buffer) / sizeof *buffer);
+		printf("Not able to open input file %s.\n", inputFile);
+		puts(sf_strerror(NULL));
+		return 1;
 	};
 
-	sf_close(infile);
+	printf("You have opened: %s\n", Files2[fileNumber - 1]);
+	printInfo(info.frames, info.channels, info.samplerate);
 
+	/*sets up to read where the watermark has been inserted*/
+	int chunksPerSecond = (info.samplerate / info.channels) / BUF_SIZE;
+	int chunksPerWatermark = chunksPerSecond * watermarkInterval;
+	long chunkCount = 0;
+	
+	while ((readCount = sf_read_double(infile2, buffer2, BUF_SIZE)))
+	{
+
+		chunkCount++;
+		if (chunkCount % chunksPerWatermark == 0)
+		{
+			printf("Watermark count: %d\n", chunkCount);
+			//retrieveWatermark(buffer2, readCount, info.channels, chunkCount);
+		}	
+		retrieveWatermark(buffer2, readCount, info.channels, chunkCount);
+	}
+	
+	sf_close(infile2);
 	return;
-
 
 }
 
@@ -170,13 +192,17 @@ void printInfo(int frames, int channels, int sampleRate)
 	printf("Sample Rate = %d\n", sampleRate);
 }
 
-void watermark(double *buffer, int count, int channels)
-{		
-	double value[MAX_CHANNEL] = { 0.0, 0.0 };
-	int i, j;
+double  watermark[] = { 0.0, 0.0, 9.0, 9.0, 1.0, 1.0, 9.0, 9.0, 1.0, 1.0, 9.0, 9.0,
+		0.6, 0.6, 0.7, 0.7, 0.8, 0.8, 0.9, 0.9 };
+double scaleFactor = 2; // to reduce the volume of the watermark
+double baseline = 0.0567;
+double temp = (1 / 100) * 2 + 0.0567;
 
-	if (channels > 1)
-	{
+void insertWatermark(double *buffer, int count, int channels)
+{
+	
+	int i, j, k;
+
 		/*
 		Sets j to be the first channel and while i is less than 1024/5, i += channels
 		buffer[3] value is multiplied by 0, and set to 0
@@ -186,46 +212,84 @@ void watermark(double *buffer, int count, int channels)
 		this keeps going until i>=1024/5 where it calls back to the while loop in processFile
 		*/
 
-		for (j = 0; j < channels; j++)
-		{
-			for (i = j; i < count / 5; i += channels)
+	int duplicates = 2;
+	for (i = 0; i < 20; i++)
+		// insert duplicate of digit, in all channels
+		for (j = 0; j < duplicates; j++)
+			for (k = 0; k < channels; k++)
 			{
-				buffer[i] *= value[j];
+				buffer[i*duplicates*channels + j*channels + k] = ((watermark[i]/100) * scaleFactor)	+ baseline;
+				
 			}
-		}
-	}
-	else
-	{
-		/*
-		If audio file has 1 channel, buffer[i] is set to 0 for all values where i < 1024/5 frames
-		and it goes back to normal until the next 1024 frames where the first  1024/5 frames.
-		*/
-		for (i = 0; i < count / 5; i++)
-		{
-			buffer[i] *= value[0];
-		}
-	}
 	
 	return;
 }
 
-void printBuffer(double *buffer, size_t count)
+void retrieveWatermark(double *buffer, int count, int channels, int chunkCount)
 {
-	int i;	
-	for (i = 0; i < count; i++)
-	{
+	//buffer comes in 1024
+	int i, j, k;
+	int watermarkCounter = 0;
+	bool startOfWatermark = 0;
+	int idxOfWatermarkStart = 0;
+	int numbersToCount = 4 * channels;
+
 	/*
-	Print the index position and value where value is not = 0
+	Goes through the 1024 chunk and stops if a value is == 0
+	Checks the next 3 values if they are all 0 and increments the counter each time
+	Compares if there are 4 zeros for 1 channel, and 8 if 2 channels and
+	Sets boolean to true and save the index position
 	*/
 
-		if (buffer[i] != 0 && i < count)
-			printf("Position: %d \nValue: %lf\n", i, buffer[i]);
-		
+	for (i = 0; i < count; i++)
+	{
+		if (!isStartOfSong)
+		{
+			if (buffer[i] != 0){
+				isStartOfSong = 1;
+			}
+		}
+		else 
+			if (fabs( ((watermark[0] / 100)* scaleFactor + baseline) - buffer[i]) <= 0.000031)
+				//if (buffer[i] == 0)
+			{
+
+				watermarkCounter = 0;
+
+				for (j = 0; j < numbersToCount; j++)
+				{
+					int idxToCheck = i + j;
+
+					if (fabs (((watermark[1] / 100)* scaleFactor + baseline) - buffer[idxToCheck]) <= 0.000031)
+						//if (buffer[idxToCheck] == 0)
+					{
+						watermarkCounter++;
+						if (watermarkCounter == numbersToCount)
+						{
+							startOfWatermark = 1;
+							idxOfWatermarkStart = i;
+						}
+					}
+
+				}
+
+			}
+	}
+	/*
+	Checks if boolean is true and prints the next 40 or 80 positions depending on the number of channels and
+	their values
+	*/
+	if (startOfWatermark)
+	{
+		for (k = idxOfWatermarkStart; k < idxOfWatermarkStart + (20 * 2 * channels); k++)
+		{
+			printf("Watermark position in file is: %d\nValue: %lf\n", BUF_SIZE*chunkCount + k, fabs(buffer[k]));
+		}
 		
 	}
-	
+	return;
 }
-
+	
 /*
 - *DONE* - Need to create function that will read the newly outputted file 
 - *DONE* - Find where the watermarks have been left on the audio
