@@ -47,7 +47,10 @@ char *Files[] = {
 
 //array of output files for insertion watermarking
 char *Files2[] = { "Male Voice Recording Insertion Output.wav", 
-"Female Voice Recording Insertion Output.wav" };
+"Female Voice Recording Insertion Output.wav",
+"C320 Male Voice Recording Insertion Output.wav",
+"C320 Female Voice Recording Insertion Output.wav"
+};
 
 //output file of LSB encoding
 char *LSBFile = "LSB encoded File.wav";
@@ -110,187 +113,6 @@ bool isStartOfSong = 0;
 double insertionBitsEncoded[1360];
 double insertionBitsDecoded[1360];
 
-
-/*
-int generateBits(){
-
-	FILE *fp;
-	fp = fopen(EmbedFile, "w");
-
-	
-	//genertate first 48 bits
-	
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[j + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 0; i < 48; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-	
-	
-	//generate 2nd 48 bits
-	
-	//increase watermark by 11secs
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(48 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 48; i < 96; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-
-	
-	//generate 3rd 48 bits
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(96 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 96; i < 144; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-
-	
-	//generate 4th 48 bits
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(144 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 144; i < 192; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-
-	
-	//generate 5th 48 bits
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(192 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 192; i < 240; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-
-	
-	//generate 6th 48 bits
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(240 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 240; i < 288; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-
-	
-	//generate 7th 48 bits
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(288 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 288; i < 336; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-
-	
-	//generate 8th 48 bits
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(336 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 336; i < 384; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-
-	//generate 9th 48 bits
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(384 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 384; i < 432; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-	fprintf(fp, "\n");
-
-	
-	//generate 10th 48 bits
-	increaseWM11secs();
-	//get all binary represention of date/time
-	//add them to Bits array
-	for (int i = 0; i < 12; i++){
-		for (int j = 0; j < 4; j++){
-			Bits[(432 + j) + (i * 4)] = Binary[watermarkValues[i]][j];
-		}
-	}
-	//writes 48 bits to text file
-	for (int i = 432; i < 480; i++){
-		//printf("%d", Bits[i]);
-		fprintf(fp, "%d", Bits[i]);
-	}
-
-
-	fclose(fp);
-	
-	return 0;
-}
-*/
 
 void generateBits() //function that generates 10 sequence of watermark values
 {
@@ -378,7 +200,6 @@ int main(void)
 		if (option == 1)
 		{
 			printf("Please select the file you want to encode\n1. Male Voice Recording\n2. Female Voice Recording\n\n");
-			//printf("3. Star Wars Tune Stereo\n");
 			scanf("%d", &file);
 
 			printf("What method would you like to use?\n1. Insertion encoding\n2. LSB encoding\n\n");
@@ -412,7 +233,8 @@ int main(void)
 			scanf("%d", &method2);
 			if (method2 == 1){
 				printf("Please select the file you want to decode.\n");
-				printf("1. Male Voice Recording\n2. Female Voice Recording\n");
+				printf("1. Uncompressed Male Voice Recording\n2. Uncompressed Female Voice Recording\n");
+				printf("3. Compressed to 320kbps Male Voice Recording\n4. Compressed to 320kbps Female Voice Recording\n");
 				scanf("%d", &file3);
 				decodeInsertion(file3);
 				insertionAccuracy(insertionBitsEncoded,insertionBitsDecoded);
@@ -552,8 +374,9 @@ int decodeLSB(int file)
 {	
 	SNDFILE *watermarkedFile = NULL;
 	SF_INFO watermarkedInfo;
-	FILE *fp;
+	FILE *fp, *ch;
 	fp = fopen(EmbedFile2, "w");
+	//unsigned int bits;
 	
 	//sets file chosen to be decoded
 	char *wmFile = WatermarkedFiles[file - 1];
@@ -617,6 +440,11 @@ int decodeLSB(int file)
 		if (startOfWatermark){
 			for (int j = idxOfWatermarkStart; j < idxOfWatermarkStart + 85; j++){
 				fprintf(fp, "%d", outputFrames[j] & 1);
+				/*
+				used to extract the 4LSBs of decoded sample
+				bits = outputFrames[j] & 0xF;
+				printf("%u\n", bits);
+				*/
 			}
 			//adjust frame counter to read after the 85bits
 			frames = idxOfWatermarkStart + 85;
@@ -700,17 +528,6 @@ int encodeInsertion(int fileNumber)
 	*/
 	sf_close(infile);
 	sf_close(outfile);
-/*
-	int answer;
-	printf("Would you like to read the new file?\n");
-	printf("1. Yes\n");
-	printf("2. No\n");
-	scanf("%d", &answer);
-
-	if (answer == 1)
-	{
-		decodeInsertion(fileNumber);
-	}*/
 
 }
 
